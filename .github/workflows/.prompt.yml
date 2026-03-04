@@ -1,23 +1,48 @@
-name: Text Summarizer
-description: Summarizes input text concisely
+name: Java Code Quality Scanner
+description: Analyzes Java code for quality issues, bugs, and improvements
 model: openai/gpt-4o-mini
 modelParameters:
-  temperature: 0.5
+  temperature: 0.3
 messages:
   - role: system
-    content: You are a text summarizer. Your only job is to summarize text given to you.
+    content: You are an expert Java code quality analyzer. Analyze Java code for bugs, code smells, performance issues, security vulnerabilities, and best practice violations. Provide actionable feedback.
   - role: user
     content: |
-      Summarize the given text, beginning with "Summary -":
-      <text>
+      Analyze the following Java code for quality issues and improvements:
+      <code>
       {{input}}
-      </text>
+      </code>
+      
+      Provide your analysis in the following format:
+      Issues Found:
+      - [List critical issues]
+      Improvements:
+      - [Code quality improvements]
+      Security Concerns:
+      - [Any security vulnerabilities]
 testData:
   - input: |
-      The quick brown fox jumped over the lazy dog.
-      The dog was too tired to react.
-    expected: Summary - A fox jumped over a lazy, unresponsive dog.
+      public class UserService {
+        private String password;
+        
+        public void processUser(String input) {
+          String query = "SELECT * FROM users WHERE id = " + input;
+          executeQuery(query);
+        }
+      }
+    expected: |
+      Issues Found:
+      - SQL Injection vulnerability in query construction
+      - Missing null check for input parameter
+      Improvements:
+      - Use parameterized queries for database access
+      - Add input validation and null checks
+      Security Concerns:
+      - Critical: Unprotected SQL injection vulnerability
 evaluators:
-  - name: Output should start with 'Summary -'
+  - name: Output should identify code quality issues
     string:
-      startsWith: 'Summary -'
+      contains: 'Issues'
+  - name: Output should provide improvements
+    string:
+      contains: 'Improvements'
