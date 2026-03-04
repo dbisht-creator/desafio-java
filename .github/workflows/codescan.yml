@@ -87,24 +87,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JAVA_CONTENT: ${{ steps.read-java.outputs.java_content }}
         run: |
+          payload=$(jq -n \
+            --arg java_content "$JAVA_CONTENT" \
+            '{
+              "model": "openai/gpt-4o",
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "You are an expert Java code quality analyzer. Analyze the provided Java code and generate a detailed markdown report of code issues, improvements, and security concerns."
+                },
+                {
+                  "role": "user",
+                  "content": ("Analyze the following Java code and provide findings in markdown format:\n\nJava Files:\n\n" + $java_content)
+                }
+              ]
+            }')
+
           response=$(curl -s -w "\n%{http_code}" "https://models.github.ai/inference/chat/completions" \
              -H "Content-Type: application/json" \
              -H "Authorization: Bearer $GITHUB_TOKEN" \
-             -d @- <<'PAYLOAD'
-          {
-            "messages": [
-              {
-                "role": "system",
-                "content": "You are an expert Java code quality analyzer. Analyze the provided Java code and generate a detailed markdown report of code issues, improvements, and security concerns."
-              },
-              {
-                "role": "user",
-                "content": "Analyze the following Java code and provide findings in markdown format:\n\nJava Files:\n\n${{ env.JAVA_CONTENT }}"
-              }
-            ],
-            "model": "openai/gpt-4o"
-          }
-          PAYLOAD
+             -d "$payload"
           )
           
           http_code=$(echo "$response" | tail -n1)
