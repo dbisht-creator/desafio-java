@@ -22,6 +22,7 @@ permissions:
 
 jobs:
   CodeScan:
+    if: false # Disable CodeScan analysis for now, as we are testing the AI model call separately. Remove this line to enable CodeScan.
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
@@ -86,7 +87,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JAVA_CONTENT: ${{ steps.read-java.outputs.java_content }}
         run: |
-          response=$(curl -s "https://models.github.ai/inference/chat/completions" \
+          response=$(curl -s -w "\n%{http_code}" "https://models.github.ai/inference/chat/completions" \
              -H "Content-Type: application/json" \
              -H "Authorization: Bearer $GITHUB_TOKEN" \
              -d @- <<'PAYLOAD'
@@ -106,8 +107,23 @@ jobs:
           PAYLOAD
           )
           
-          # Extract the content from the response
-          content=$(echo "$response" | jq -r '.choices[0].message.content // empty')
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+          
+          if [ "$http_code" != "200" ]; then
+            echo "API request failed with status $http_code"
+            content="API Error: Status $http_code - $body"
+          else
+            # Extract the content from the response
+            content=$(echo "$body" | jq -r '.choices[0].message.content // empty')
+            if [ -z "$content" ]; then
+              content="No analysis available"
+            fi
+          fi
+          
           echo "analysis_result<<EOF" >> $GITHUB_OUTPUT
           echo "$content" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
