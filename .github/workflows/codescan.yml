@@ -31,12 +31,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Set up Java 17
+        id: setup-java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
       - name: Verify Java version
-        run: java -version
+        run: |
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME"
       - name: Cache files
         uses: actions/cache@v3
         with:
@@ -46,8 +49,6 @@ jobs:
           restore-keys: ${{ runner.os }}-sonar
       - name: Run Analysis
         uses: codescan-io/codescan-scanner-action@5b2e8c5683ef6a5adc8fa3b7950bb07debccce12
-        env:
-          JAVA_HOME: ${{ steps.setup-java.outputs.path }}
         with:
           login: ${{ secrets.CODESCAN_AUTH_TOKEN }}
           organization: ${{ secrets.CODESCAN_ORGANIZATION_KEY }}
@@ -97,7 +98,7 @@ jobs:
               },
               {
                 "role": "user",
-                "content": "Analyze the following Java code and provide findings in markdown format:\n\nJava Files:\n\n${JAVA_CONTENT}"
+                "content": "Analyze the following Java code and provide findings in markdown format:\n\nJava Files:\n\n${{ env.JAVA_CONTENT }}"
               }
             ],
             "model": "openai/gpt-4o"
